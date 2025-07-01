@@ -1,6 +1,6 @@
 pandas
 duckdb
-sec-edgar-downloader==4.4.0
+sec-edgar-downloader==4.3.0
 streamlit
 plotly
 openai
