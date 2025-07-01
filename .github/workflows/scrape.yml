@@ -1,22 +1,30 @@
 name: quarterly-scrape
 on:
   schedule:
-    # runs 4× per year (Feb, May, Aug, Nov 15 at 14:00 UTC)
     - cron: '0 14 15 2,5,8,11 *'
-  workflow_dispatch: {}   # lets you trigger it manually
+  workflow_dispatch:
 jobs:
   run:
     runs-on: ubuntu-latest
+
+    # 👇 NEW: make secrets.SEC_EMAIL visible as $SEC_EMAIL
+    env:
+      SEC_EMAIL: ${{ secrets.SEC_EMAIL }}
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install deps
         run: pip install -r requirements.txt
+
       - name: Run scraper
         run: python scrape.py
+
       - name: Commit data file
         run: |
           git config user.name  "github-actions"
