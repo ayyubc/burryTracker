@@ -1,0 +1,26 @@
+name: quarterly-scrape
+on:
+  schedule:
+    # runs 4× per year (Feb, May, Aug, Nov 15 at 14:00 UTC)
+    - cron: '0 14 15 2,5,8,11 *'
+  workflow_dispatch: {}   # lets you trigger it manually
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run scraper
+        run: python scrape.py
+      - name: Commit data file
+        run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@github.com"
+          git add holdings.parquet
+          git commit -m "Auto-update data" || echo "Nothing to commit"
+          git push
