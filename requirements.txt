@@ -1,0 +1,7 @@
+pandas
+duckdb
+sec-edgar-downloader
+streamlit
+plotly
+openai
+langchain
