@@ -10,6 +10,7 @@ jobs:
     # 👇 NEW: make secrets.SEC_EMAIL visible as $SEC_EMAIL
     env:
       SEC_EMAIL: ${{ secrets.SEC_EMAIL }}
+      SEC_COMPANY: ${{ secrets.SEC_COMPANY }}
 
     steps:
       - uses: actions/checkout@v4
