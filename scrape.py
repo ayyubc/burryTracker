@@ -1,61 +1,55 @@
 """
-scrape.py
-~~~~~~~~~
-Downloads the most-recent 13-F filing for Michael Burry’s
-Scion Asset Management, converts it to a tidy table, and saves
-`holdings.parquet` in the repo root.
+scrape.py  —  downloads the latest 13-F for Scion Asset Mgmt (Michael Burry)
+and saves holdings.parquet.
 
-SEC’s new policy (2024-04) requires a contact e-mail address
-for automated scrapers, so we read it from the GitHub secret
-`SEC_EMAIL`.
-
-Dependencies (already listed in requirements.txt):
-  pandas, duckdb, sec-edgar-downloader
+Requires two GitHub secrets:
+  SEC_EMAIL   – your contact e-mail (already added)
+  SEC_COMPANY – short project / company name (e.g. "Burry Tracker")
 """
 
 import os
-import duckdb
-import pandas as pd
+import duckdb, pandas as pd
 from sec_edgar_downloader import Downloader
 
-# ---------- CONFIG ----------------------------------------------------------
+# ---------- configuration ---------- #
+DOWNLOAD_DIR = "data"
+CIK          = "0001166559"                       # Scion Asset Management
 
-DOWNLOAD_DIR = "data"                     # where raw filings land
-CIK = "0001166559"                        # Scion Asset Management
-EMAIL = os.getenv("SEC_EMAIL")            # set in GitHub → Settings → Secrets
-
-# ---------------------------------------------------------------------------
+EMAIL   = os.getenv("SEC_EMAIL")                  # must exist
+COMPANY = os.getenv("SEC_COMPANY", "Personal Project")  # fallback if not set
+# ----------------------------------- #
 
 if not EMAIL:
     raise RuntimeError(
-        "Environment variable SEC_EMAIL is missing.\n"
-        "Add it as a GitHub secret: Settings → Secrets → Actions → New secret."
+        "SEC_EMAIL is missing – add it as a GitHub secret "
+        "(Settings → Secrets → Actions → New secret)."
     )
 
-# create downloader
-dl = Downloader(download_folder=DOWNLOAD_DIR, email_address=EMAIL)
+# pass BOTH email_address and company_name – new library requirement
+dl = Downloader(
+    download_folder=DOWNLOAD_DIR,
+    email_address=EMAIL,
+    company_name=COMPANY,
+)
 
-# fetch ONE most-recent 13-F filing (SEC form code: 13F-HR)
-print("Downloading latest 13-F for CIK", CIK)
+print("Fetching most-recent 13-F …")
 dl.get(form="13F-HR", cik=CIK, amount=1)
 
-# parse all 13-F filings in DOWNLOAD_DIR for this CIK
 rows = []
 for filing in dl.get_filings(cik=CIK, form="13F-HR"):
     for h in filing.get_holdings():
         rows.append(
-            {
-                "ticker": h["ticker"],
-                "value": h["value"],
-                "shares": h["shares"],
-                "filing_date": filing.filing_date,
-            }
+            dict(
+                ticker      = h["ticker"],
+                value       = h["value"],
+                shares      = h["shares"],
+                filing_date = filing.filing_date,
+            )
         )
 
 df = pd.DataFrame(rows)
 if df.empty:
-    raise RuntimeError("No holdings parsed — check that the filing downloaded ok.")
+    raise RuntimeError("No holdings parsed – did the filing download correctly?")
 
-# write a compact columnar file (few KB) that Streamlit can read fast
 duckdb.write_parquet(df, "holdings.parquet")
-print(f"Saved holdings.parquet with {len(df):,} rows")
+print(f"✅  Saved holdings.parquet with {len(df):,} rows")
